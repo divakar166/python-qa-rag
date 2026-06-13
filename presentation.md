@@ -1,24 +1,25 @@
 ---
 marp: true
-theme: uncover
+theme: gaia
 class:
   - lead
   - invert
+size: 16:9
 paginate: true
 backgroundColor: #1a1a2e
 color: #eaeaea
 style: |
   section {
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 24px;
   }
   h1 {
     color: #00d4ff;
-    font-size: 2.2em;
+    font-size: 1.8em;
     margin-bottom: 0.3em;
   }
   h2 {
     color: #00d4ff;
-    font-size: 1.6em;
+    font-size: 1.3em;
     margin-bottom: 0.4em;
   }
   ul {
@@ -27,7 +28,7 @@ style: |
   }
   li {
     margin: 0.4em 0;
-    font-size: 0.95em;
+    font-size: 0.75em;
     line-height: 1.5;
     padding-left: 1.5em;
     position: relative;
@@ -95,7 +96,7 @@ style: |
 
 <div class="small">
   AI Engineer Assessment<br>
-  Candidate Name<br>
+  Divakar Singh<br>
   June 2026
 </div>
 
@@ -119,7 +120,7 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 
 **Source:** Kaggle Stack Overflow Python Questions Dataset
 
-- Raw dataset: ~380K Stack Overflow Python questions
+- Raw dataset: ~607K Stack Overflow Python questions
 - Cleaning pipeline (BeautifulSoup HTML stripping):
   - Filtered questions with `score ≥ 2`
   - Selected top-3 answers per question by vote
@@ -134,17 +135,17 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 ## **System Architecture**
 
 ```
-┌────────┐   ┌─────────┐   ┌──────────┐   ┌─────────┐
-│  User  │──▶│ FastAPI  │──▶│  Qdrant  │──▶│   LLM   │
-│(Browser)│  │  Server  │   │  Cloud   │   │ (NVIDIA)│
-└────────┘   └─────────┘   └──────────┘   └─────────┘
+┌─────────┐   ┌─────────┐   ┌──────────┐   ┌──────────┐
+│  User   │──>│ FastAPI │──>│  Qdrant  │──>│   LLM    │
+│(Browser)│   │  Server │   │  Cloud   │   │ (NVIDIA) │
+└─────────┘   └─────────┘   └──────────┘   └──────────┘
                   │               │              │
                   ▼               ▼              ▼
             Chat UI (HTML)   Vectors (384d)   Meta-Llama
                              all-MiniLM-L6-v2  3.3-70B
 ```
 
-- **FastAPI** — async Python web server with 3 endpoints
+- **FastAPI** — async Python web server with 3 endpointsx`
 - **Qdrant Cloud** — vector database with server-side embedding inference
 - **LLM API** — OpenAI-compatible (NVIDIA), temperature=0 for determinism
 
@@ -154,16 +155,16 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 
 ## **RAG Pipeline**
 
-| Stage | Component | Detail |
-|-------|-----------|--------|
-| **I**ngestion | `ingestion.py` | Batch-upserts ~175K docs to Qdrant (100/batch) |
-| **E**mbedding | Qdrant Cloud Inference | `all-MiniLM-L6-v2` → 384-dim vectors |
-| **R**etrieval | `qdrant_client.query_points()` | Cosine similarity, top-5 |
-| **G**eneration | OpenAI Chat Completions | Context-grounded system prompt → answer |
+| Stage          | Component                      | Detail                                         |
+| -------------- | ------------------------------ | ---------------------------------------------- |
+| **Ingestion**  | `ingestion.py`                 | Batch-upserts ~175K docs to Qdrant (100/batch) |
+| **Embedding**  | Qdrant Cloud Inference         | `all-MiniLM-L6-v2` → 384-dim vectors           |
+| **Retrieval**  | `qdrant_client.query_points()` | Cosine similarity, top-5                       |
+| **Generation** | OpenAI Chat Completions        | Context-grounded system prompt → answer        |
 
 - Embedding computed server-side by Qdrant (no local model)
 - Context block: 5 documents joined with `\n\n---\n\n`
-- System prompt enforces: *"Answer based only on context"*
+- System prompt enforces: _"Answer based only on context"_
 
 <!-- _footer: "Single dense embedding model — no hybrid search yet" -->
 
@@ -171,15 +172,15 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 
 ## **API & Deployment**
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Serves chat UI (vanilla HTML/JS) |
-| `/health` | GET | Returns Qdrant connection status |
-| `/ask` | POST | Accepts `{"question": "..."}` → answer + sources |
+| Endpoint  | Method | Description                                      |
+| --------- | ------ | ------------------------------------------------ |
+| `/`       | GET    | Serves chat UI (vanilla HTML/JS)                 |
+| `/health` | GET    | Returns Qdrant connection status                 |
+| `/ask`    | POST   | Accepts `{"question": "..."}` → answer + sources |
 
 - **Validation:** question 10–1000 chars, Pydantic models
 - **Error handling:** 404 (no docs), 422 (validation), 502 (upstream failure)
-- **Deployment:** Docker → Hugging Face Spaces 🌊
+- **Deployment:** Docker → Hugging Face Spaces
   - Environment variables as Space Secrets
   - `uvicorn app.api:app --host 0.0.0.0 --port 8000`
 
@@ -190,10 +191,12 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 ## **Testing & Evaluation**
 
 **Unit Tests** (13 tests, pytest-asyncio + httpx)
+
 - All endpoints: success, failure, validation, edge cases
 - Mocked Qdrant + LLM clients for deterministic runs
 
 **Evaluation** (12 queries against live API)
+
 ```
 ╔════════════════════════╤══════════╤═══════════╗
 ║ Query                  │ Relevant │ Correct   ║
@@ -214,15 +217,17 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 ## **Observations & Limitations**
 
 **What works well:**
+
 - High relevance for common Python topics (decorators, async, OOP)
 - Source attribution provides user trust and verifiability
 - Deterministic LLM (temp=0) gives consistent answers
 
 **Known limitations:**
-- ⏱ **Timeout risk** — external LLM calls can hang; no client-side timeout
-- 📡 **Retrieval gaps** — single dense embedding misses keyword-critical matches
-- 📚 **Dataset coverage** — dated Stack Overflow data; niche libraries sparse
-- 🔄 **No caching** — identical questions re-query Qdrant + LLM each time
+
+- **Timeout risk** — external LLM calls can hang; no client-side timeout
+- **Retrieval gaps** — single dense embedding misses keyword-critical matches
+- **Dataset coverage** — dated Stack Overflow data; niche libraries sparse
+- **No caching** — identical questions re-query Qdrant + LLM each time
 
 <!-- _footer: "Documented in evaluation/evaluation_results.md" -->
 
@@ -230,13 +235,13 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 
 ## **Scaling to 100+ Concurrent Users**
 
-| Strategy | Implementation |
-|----------|---------------|
-| **Async I/O** | FastAPI async handlers + `httpx.AsyncClient` |
-| **Redis caching** | Cache (question → answer) for frequent queries, TTL-based invalidation |
-| **Horizontal scaling** | Stateless app → multiple Docker replicas behind load balancer |
-| **Load balancing** | nginx / Traefik — round-robin across replicas |
-| **Qdrant clustering** | Qdrant Cloud auto-scales; shard + replicate collection |
+| Strategy               | Implementation                                                         |
+| ---------------------- | ---------------------------------------------------------------------- |
+| **Async I/O**          | FastAPI async handlers + `httpx.AsyncClient`                           |
+| **Redis caching**      | Cache (question → answer) for frequent queries, TTL-based invalidation |
+| **Horizontal scaling** | Stateless app → multiple Docker replicas behind load balancer          |
+| **Load balancing**     | nginx / Traefik — round-robin across replicas                          |
+| **Qdrant clustering**  | Qdrant Cloud auto-scales; shard + replicate collection                 |
 
 - Estimated throughput: **~200 req/s** with 3–5 app replicas + Redis cache hit ratio > 40%
 - LLM calls are the bottleneck — caching and async are critical
@@ -248,11 +253,12 @@ Build a Q&A assistant that answers Python programming questions using grounded S
 ## **Future Improvements & Conclusion**
 
 **Planned enhancements:**
-- 🔍 **Hybrid search** — dense + sparse (BM25) retrieval for better recall
-- 📊 **Reranking** — cross-encoder to re-rank top-20 before LLM
-- ⚡ **Streaming responses** — token-by-token via SSE for better UX
-- ✅ **Confidence scoring** — low-confidence fallback responses
-- 🛡️ **Rate limiting + auth** — API key validation, tenant isolation
+
+- **Hybrid search** — dense + sparse (BM25) retrieval for better recall
+- **Reranking** — cross-encoder to re-rank top-20 before LLM
+- **Streaming responses** — token-by-token via SSE for better UX
+- **Confidence scoring** — low-confidence fallback responses
+- **Rate limiting + auth** — API key validation, tenant isolation
 
 **Conclusion:**
 The Python QA RAG Assistant delivers a **production-ready, grounded Q&A system** with clear architecture, comprehensive testing, and a path to scale. Designed for maintainability and extension.
