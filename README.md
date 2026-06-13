@@ -48,6 +48,15 @@
 
 ---
 
+## Quick Links
+
+- Live Demo: [Huggingface Space](https://huggingface.co/spaces/divakarsingh166/python-qa-rag-assistant)
+- Presentation: presentation.pptx
+- Evaluation Results: evaluation/evaluation_results.md
+- Data Cleaning Notebook: notebooks/Data Cleaning.ipynb
+
+---
+
 ## Overview
 
 The **Python QA RAG Assistant** is a retrieval-augmented generation application that answers Python programming questions using a curated corpus of Stack Overflow Q&A pairs. It combines dense vector search via Qdrant Cloud with an LLM to produce grounded, context-aware answers with source attribution.
